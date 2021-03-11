@@ -1,12 +1,25 @@
 import re
 import sys
 from collections import defaultdict
-from os import sep
-from typing import Callable, DefaultDict, Iterator, List, NamedTuple, Sequence, Tuple
 from functools import reduce
+from typing import Callable, DefaultDict, Iterator, List, NamedTuple, Sequence, Tuple
 
+# Part 1
+# toggle: invert state
+# turn on: turn on
+# turn off: turn off
 # Include state arg even when not used to simplify calling
-OPERATIONS = {
+PART_1_OPERATIONS = {
+    "toggle": lambda state: 0 if state >= 1 else 1,
+    "turn on": lambda state: 1,
+    "turn off": lambda state: 0,
+}
+
+# Part 2:
+# toggle: increase brightness by 2
+# turn on: increase brightness by
+# turn off: decrease brightness by 1 min 0
+PART_2_OPERATIONS = {
     "toggle": lambda brightness: brightness + 2,
     "turn on": lambda brightness: brightness + 1,
     "turn off": lambda brightness: brightness + (-1 if brightness >= 1 else 0),
@@ -34,7 +47,7 @@ def parse_instruction(raw_instruction: str, point_seperator=",") -> Instruction:
     left, stop_point = raw_instruction.split(" through ")
     operation, start_point = re.match(r"^([a-z ]+)\s([\d,]+)", left).groups()
 
-    if operation not in OPERATIONS.keys():
+    if operation not in PART_1_OPERATIONS.keys():
         raise ValueError(f"Invalid operation: {operation}")
 
     start_x, start_y = start_point.split(point_seperator)
@@ -71,7 +84,7 @@ def generate_coordinates(
 
 
 def process_instructions(
-    instructions: Sequence[Instruction], part_1=True
+    instructions: Sequence[Instruction], part_1
 ) -> DefaultDict[Tuple[int, int], int]:
     """Update the state of every affected point for each instruction and return the state."""
     lights_state: DefaultDict[Tuple[int, int], int] = defaultdict(int)
@@ -81,20 +94,16 @@ def process_instructions(
             (instruction.start_x, instruction.start_y),
             (instruction.stop_x, instruction.stop_y),
         ):
-            brightness: int = lights_state[point]
+            state: int = lights_state[point]
 
             # Snag the update function for this type of operation and update our point's state
-            operation: Callable = OPERATIONS[instruction.operation]
-
-            if part_1 and instruction.operation == "turn off":
-                lights_state[point] = 0
-            elif part_1 and instruction.operation == "toggle":
-                if brightness >= 1:
-                    lights_state[point] = 0
-                else:
-                    lights_state[point] = 1
+            if part_1:
+                operations_lookup = PART_1_OPERATIONS
             else:
-                lights_state[point] = operation(brightness)
+                operations_lookup = PART_2_OPERATIONS
+
+            operation: Callable = operations_lookup[instruction.operation]
+            lights_state[point] = operation(state)
 
     return lights_state
 
@@ -105,23 +114,26 @@ def main():
 
     instructions: Tuple[Instruction, ...] = tuple(parse_instructions(raw_instructions))
 
-    part1_state: DefaultDict[Tuple[int, int], int] = process_instructions(instructions)
+    lights_state: DefaultDict[Tuple[int, int], int] = process_instructions(
+        instructions, part_1=True
+    )
 
+    # Count the number of turned on lights
     turned_on_lights: int = reduce(
         lambda total, state: total + (1 if state > 0 else 0),
-        part1_state.values(),
+        lights_state.values(),
         0,
     )
 
     print(f"Part 1 turned on lights: {turned_on_lights}")
 
-    part2_state: DefaultDict[Tuple[int, int], int] = process_instructions(
+    lights_brightness: DefaultDict[Tuple[int, int], int] = process_instructions(
         instructions, part_1=False
     )
-    total_brightness: int = sum(part2_state.values())
-    print(f"Part 2 total brightness: {total_brightness}")
 
-    # 15563355 is too high
+    # Sum the total brightness
+    total_brightness: int = sum(lights_brightness.values())
+    print(f"Part 2 total brightness: {total_brightness}")
 
 
 if __name__ == "__main__":
