@@ -1,8 +1,7 @@
 import sys
 from typing import NamedTuple, List, Tuple, Iterator
-from itertools import combinations, repeat
+from itertools import combinations
 from functools import reduce
-from pprint import pprint
 
 
 class Package(NamedTuple):
