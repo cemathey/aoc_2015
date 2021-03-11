@@ -139,3 +139,4 @@ cython_debug/
 
 # Advent of Code
 input.txt
+test_input.txt
