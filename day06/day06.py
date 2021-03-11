@@ -7,9 +7,9 @@ from functools import reduce
 
 # Include state arg even when not used to simplify calling
 OPERATIONS = {
-    "toggle": lambda state: not state,
-    "turn on": lambda state: True,
-    "turn off": lambda state: False,
+    "toggle": lambda brightness: brightness + 2,
+    "turn on": lambda brightness: brightness + 1,
+    "turn off": lambda brightness: brightness + (-1 if brightness >= 1 else 0),
 }
 
 
@@ -71,21 +71,30 @@ def generate_coordinates(
 
 
 def process_instructions(
-    instructions: Sequence[Instruction],
-) -> DefaultDict[Tuple[int, int], bool]:
+    instructions: Sequence[Instruction], part_1=True
+) -> DefaultDict[Tuple[int, int], int]:
     """Update the state of every affected point for each instruction and return the state."""
-    lights_state: DefaultDict[Tuple[int, int], bool] = defaultdict(bool)
+    lights_state: DefaultDict[Tuple[int, int], int] = defaultdict(int)
 
     for instruction in instructions:
         for point in generate_coordinates(
             (instruction.start_x, instruction.start_y),
             (instruction.stop_x, instruction.stop_y),
         ):
-            state: bool = lights_state[point]
+            brightness: int = lights_state[point]
 
             # Snag the update function for this type of operation and update our point's state
             operation: Callable = OPERATIONS[instruction.operation]
-            lights_state[point] = operation(state)
+
+            if part_1 and instruction.operation == "turn off":
+                lights_state[point] = 0
+            elif part_1 and instruction.operation == "toggle":
+                if brightness >= 1:
+                    lights_state[point] = 0
+                else:
+                    lights_state[point] = 1
+            else:
+                lights_state[point] = operation(brightness)
 
     return lights_state
 
@@ -96,15 +105,23 @@ def main():
 
     instructions: Tuple[Instruction, ...] = tuple(parse_instructions(raw_instructions))
 
-    lights_state: DefaultDict[Tuple[int, int], bool] = process_instructions(
-        instructions
-    )
+    part1_state: DefaultDict[Tuple[int, int], int] = process_instructions(instructions)
 
     turned_on_lights: int = reduce(
-        lambda total, state: total + (1 if state else 0), lights_state.values(), 0
+        lambda total, state: total + (1 if state > 0 else 0),
+        part1_state.values(),
+        0,
     )
 
     print(f"Part 1 turned on lights: {turned_on_lights}")
+
+    part2_state: DefaultDict[Tuple[int, int], int] = process_instructions(
+        instructions, part_1=False
+    )
+    total_brightness: int = sum(part2_state.values())
+    print(f"Part 2 total brightness: {total_brightness}")
+
+    # 15563355 is too high
 
 
 if __name__ == "__main__":
